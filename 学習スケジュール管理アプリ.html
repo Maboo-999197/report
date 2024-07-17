@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習スケジュール管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin-top: 50px;
+        }
+        input, button {
+            font-size: 1.2em;
+            padding: 10px;
+            margin: 10px;
+        }
+        table {
+            width: 80%;
+            margin: 0 auto 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        .completed td {
+            text-decoration: line-through;
+            background-color: #e0e0e0;
+        }
+        .section-title {
+            margin-top: 30px;
+            font-size: 1.5em;
+        }
+        #overdueTasks {
+            background-color: rgb(249, 141, 141);
+        }
+        #oneWeekTasks {
+            background-color: rgb(246, 246, 100);
+        }
+        #futureTasks {
+            background-color: rgb(89, 202, 89);
+        }
+        .overdue {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>学習スケジュール管理</h1>
+    <div id="userSection">
+        <div id="registerSection">
+            <h2>まだユーザー登録がお済みでない方はこちらから</h2>
+            <input type="text" id="usernameInput" placeholder="ユーザー名">
+            <input type="password" id="passwordInput" placeholder="パスワード">
+            <button onclick="registerUser()">ユーザー登録</button>
+        </div>
+        <div id="loginSection">
+            <h2>ユーザーの方はこちらから</h2>
+            <input type="text" id="loginUsernameInput" placeholder="ユーザー名">
+            <input type="password" id="loginPasswordInput" placeholder="パスワード">
+            <button onclick="loginUser()">ログイン</button>
+        </div>
+    </div>
+    <div id="taskSection" style="display: none;">
+        <input type="text" id="taskInput" placeholder="やること">
+        <input type="date" id="deadlineInput">
+        <button onclick="addTask()">追加</button>
+
+        <div class="section-title" id="overdueSection">期限が過ぎているもの</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>期限</th>
+                    <th>やること</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="overdueTasks"></tbody>
+        </table>
+
+        <div class="section-title" id="oneWeekSection">期限が1週間前のもの</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>期限</th>
+                    <th>やること</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="oneWeekTasks"></tbody>
+        </table>
+
+        <div class="section-title" id="futureSection">期限が1週間以降のもの</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>期限</th>
+                    <th>やること</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="futureTasks"></tbody>
+        </table>
+
+        <div class="section-title">完了しているもの</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>期限</th>
+                    <th>やること</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="completedTasks"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        function registerUser() {
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+            if (username && password) {
+                const users = JSON.parse(localStorage.getItem('users')) || {};
+                if (users[username]) {
+                    alert('このユーザー名は既に登録されています。');
+                    return;
+                }
+                users[username] = password;
+                localStorage.setItem('users', JSON.stringify(users));
+                currentUser = username;
+                document.getElementById('userSection').style.display = 'none';
+                document.getElementById('taskSection').style.display = 'block';
+                loadTasks();
+            } else {
+                alert('ユーザー名とパスワードを入力してください。');
+            }
+        }
+
+        function loginUser() {
+            const username = document.getElementById('loginUsernameInput').value;
+            const password = document.getElementById('loginPasswordInput').value;
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            if (users[username] && users[username] === password) {
+                currentUser = username;
+                document.getElementById('userSection').style.display = 'none';
+                document.getElementById('taskSection').style.display = 'block';
+                loadTasks();
+            } else {
+                alert('ユーザー名またはパスワードが正しくありません。');
+            }
+        }
+
+        function addTask() {
+            const taskInput = document.getElementById('taskInput');
+            const deadlineInput = document.getElementById('deadlineInput');
+            const task = taskInput.value;
+            const deadline = deadlineInput.value;
+
+            if (task && deadline) {
+                const tasks = JSON.parse(localStorage.getItem(currentUser)) || [];
+                tasks.push({ deadline, task, completed: false });
+                localStorage.setItem(currentUser, JSON.stringify(tasks));
+                loadTasks();
+
+                taskInput.value = '';
+                deadlineInput.value = '';
+            } else {
+                alert('タスクと期限を入力してください。');
+            }
+        }
+
+        function saveTasks(tasks) {
+            localStorage.setItem(currentUser, JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem(currentUser)) || [];
+            const now = new Date();
+            const oneWeekLater = new Date();
+            oneWeekLater.setDate(now.getDate() + 7);
+
+            const overdueTasks = document.getElementById('overdueTasks');
+            const oneWeekTasks = document.getElementById('oneWeekTasks');
+            const futureTasks = document.getElementById('futureTasks');
+            const completedTasks = document.getElementById('completedTasks');
+
+            overdueTasks.innerHTML = '';
+            oneWeekTasks.innerHTML = '';
+            futureTasks.innerHTML = '';
+            completedTasks.innerHTML = '';
+
+            tasks.forEach((task, index) => {
+                const taskDate = new Date(task.deadline);
+                const row = document.createElement('tr');
+
+                const deadlineCell = document.createElement('td');
+                deadlineCell.textContent = task.deadline;
+                row.appendChild(deadlineCell);
+
+                const taskCell = document.createElement('td');
+                taskCell.textContent = task.task;
+                row.appendChild(taskCell);
+
+                const actionCell = document.createElement('td');
+
+                const completeButton = document.createElement('button');
+                if (task.completed) {
+                    completeButton.textContent = '未完了';
+                    completeButton.onclick = function() {
+                        task.completed = false;
+                        saveTasks(tasks);
+                        loadTasks();
+                    };
+                    row.classList.add('completed');
+                } else {
+                    completeButton.textContent = '完了';
+                    completeButton.onclick = function() {
+                        task.completed = true;
+                        saveTasks(tasks);
+                        loadTasks();
+                    };
+                }
+                actionCell.appendChild(completeButton);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = '編集';
+                editButton.onclick = function() {
+                    editTask(index);
+                };
+                actionCell.appendChild(editButton);
+
+                row.appendChild(actionCell);
+
+                if (task.completed) {
+                    completedTasks.appendChild(row);
+                } else {
+                    if (taskDate < now) {
+                        overdueTasks.appendChild(row);
+                    } else if (taskDate <= oneWeekLater) {
+                        oneWeekTasks.appendChild(row);
+                    } else {
+                        futureTasks.appendChild(row);
+                    }
+                }
+            });
+        }
+
+        function editTask(index) {
+            const tasks = JSON.parse(localStorage.getItem(currentUser)) || [];
+            const task = tasks[index];
+            const newTask = prompt('新しいやること:', task.task);
+            const newDeadline = prompt('新しい期限 (YYYY-MM-DD):', task.deadline);
+
+            if (newTask && newDeadline) {
+                tasks[index].task = newTask;
+                tasks[index].deadline = newDeadline;
+                saveTasks(tasks);
+                loadTasks();
+            } else {
+                alert('やることと期限を入力してください。');
+            }
+        }
+    </script>
+</body>
+</html>
